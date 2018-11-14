@@ -64,8 +64,9 @@ class MainWindow(Gtk.Window):
                     group_name = name
             for v in value:
                 img_file = v[1]
-                new_name = "%s-%s" % (group_name, img_file)
-                os.rename(img_file, new_name)
+                if group_name:
+                    new_name = "%s-%s" % (group_name, img_file)
+                    os.rename(img_file, new_name)
 
     def group_names(self):
 
