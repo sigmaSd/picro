@@ -64,16 +64,8 @@ class MainWindow(Gtk.Window):
                     group_name = name
             for v in value:
                 img_file = v[1]
-                newer_name = None
-                name_idx = img_file.rfind("/")
-                if name_idx != -1:
-                    img_name[name_idx+1:]
-                else:
-                    img_name = img_file
-                newer_name = "%s-%s" % (group_name, img_name)
-                newer_name = img_file.replace(img_name, newer_name)
-
-                os.rename(img_file, newer_name)
+                new_name = "%s-%s" % (group_name, img_file)
+                os.rename(img_file, new_name)
 
     def group_names(self):
 
@@ -126,7 +118,7 @@ class MainWindow(Gtk.Window):
     def search_dict_for_img(self):
         for img_list in self.img_groups.values():
             for img in img_list:
-                if img.get_active():
+                if img[0].get_active():
                     return img
 
     def add_img_to_grp(self, key_val, active_img):
