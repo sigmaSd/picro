@@ -1,6 +1,6 @@
 # picro
 
-**Tech demo:** Organize pictures, select each one and add it to a one of 9 groups using keypadnum, name the groups than click done, the soft will append the group names to corrosponding pictures names.
+**Tech demo:** Organize pictures, select each one and add it to a one of 9 groups using keypadnum, name the groups then click done, the soft will append the group names to corrosponding pictures names.
 
 ## To do
 
