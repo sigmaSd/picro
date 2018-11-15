@@ -102,24 +102,18 @@ class MainWindow(Gtk.Window):
     def create_icons(self, f):
         icn = GdkPixbuf.Pixbuf.new_from_file_at_size(f, 420, 420)
         img = Gtk.Image.new_from_pixbuf(icn)
-        #rb = Gtk.RadioButton.new_from_widget(self.radio_group)
-        # rb.add(img)
         self.radio_img_list.append((img, f))
 
     def core_game(self, _, key):
         key_val = key.get_keyval()[1]
         if key_val not in range(65457, 65466):
             return
-        #active_img = self.search_list_for_img()
 
-        # if not active_img:
-        #    active_img = self.search_dict_for_img()
         if not self.grid.get_selected_children():
             return
         active_img = self.grid.get_selected_children()[0].get_child()
         active_img = self.search_list_for_img(
             active_img) or self.search_dict_for_img(active_img)
-        print(active_img)
         self.add_img_to_grp(key_val, active_img)
         self.rearrange()
 
@@ -129,11 +123,6 @@ class MainWindow(Gtk.Window):
     def search_dict_for_img(self, active_img):
         for img_list in self.img_groups.values():
             active_img = [img for img in img_list if active_img in img][0]
-           # if img:
-           #     return active_img
-           # for img in img_list:
-           #     if img[0].get_active():
-           #         return img
 
     def add_img_to_grp(self, key_val, active_img):
         for list_img in self.img_groups.values():
