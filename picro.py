@@ -78,9 +78,11 @@ class MainWindow(Gtk.Window):
         def translate(i):
             return i - 65456
         grp_names_list = self.get_entred_groups_names()
-        # order pic
+        # delete untagged pic from dict, order pic
+        del self.img_groups[65466]
         self.img_groups = collections.OrderedDict(
             sorted(self.img_groups.items()))
+
         for key, value in self.img_groups.items():
             index = translate(key)
             for ref_idx, name in grp_names_list:
@@ -91,6 +93,8 @@ class MainWindow(Gtk.Window):
                 if group_name:
                     new_name = "%s-%s" % (group_name, img_file)
                     os.rename(img_file, new_name)
+
+        quit()
 
     def get_entred_groups_names(self):
         names_list = []
