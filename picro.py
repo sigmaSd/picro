@@ -22,6 +22,7 @@ class MainWindow(Gtk.Window):
 
         #self.grid = Gtk.Grid.new()
         self.grid = Gtk.FlowBox.new()
+        self.grid.set_sort_func(self.rearrange)
         self.scrolled_win = Gtk.ScrolledWindow.new()
         self.scrolled_win.add(self.grid)
 
@@ -77,6 +78,9 @@ class MainWindow(Gtk.Window):
         def translate(i):
             return i - 65456
         grp_names_list = self.get_entred_groups_names()
+        # order pic
+        self.img_groups = collections.OrderedDict(
+            sorted(self.img_groups.items()))
         for key, value in self.img_groups.items():
             index = translate(key)
             for ref_idx, name in grp_names_list:
@@ -100,17 +104,19 @@ class MainWindow(Gtk.Window):
 
     def add_icons(self):
         files = os.listdir(os.path.curdir)
+        tmp_list = []
         for f in files:
             out = subprocess.check_output(["file", f]).decode("UTF-8")
             if "JPEG" in out or "PNG" in out:
-                self.create_icons(f)
+                img = self.create_images(f)
+                tmp_list.append(img[1])
+                self.grid.add(img[0])
+        self.img_groups[65466] = list(zip(self.grid.get_children(), tmp_list))
 
-        self.fill_grid(self.radio_img_list)
-
-    def create_icons(self, f):
+    def create_images(self, f):
         icn = GdkPixbuf.Pixbuf.new_from_file_at_size(f, 420, 420)
         img = Gtk.Image.new_from_pixbuf(icn)
-        self.radio_img_list.append((img, f))
+        return (img, f)
 
     def core_game(self, _, key):
         key_val = key.get_keyval()[1]
@@ -119,22 +125,22 @@ class MainWindow(Gtk.Window):
 
         if not self.grid.get_selected_children():
             return
-        active_img = self.grid.get_selected_children()[0].get_child()
-        active_img = self.search_list_for_img(
-            active_img) or self.search_dict_for_img(active_img)
+        active_img = self.grid.get_selected_children()[0]
+        active_img = self.search_dict_for_img(active_img)
         self.add_img_to_grp(key_val, active_img)
-        self.rearrange()
-
-    def search_list_for_img(self, active_img):
-        return [img for img in self.radio_img_list if active_img in img][0]
+        # signal sort fn
+        active_img[0].changed()
 
     def search_dict_for_img(self, active_img):
         for img_list in self.img_groups.values():
-            active_img = [img for img in img_list if active_img in img][0]
+            if img_list:
+                active_img_list = [
+                    img for img in img_list if active_img in img]
+                if active_img_list:
+                    return active_img_list[0]
 
     def add_img_to_grp(self, key_val, active_img):
         for list_img in self.img_groups.values():
-            list_img: list
             if active_img in list_img:
                 idx = list_img.index(active_img)
                 del list_img[idx]
@@ -145,27 +151,31 @@ class MainWindow(Gtk.Window):
         else:
             self.img_groups[key_val].append(active_img)
 
-    def rearrange(self):
-        # perf !!!
-        self.img_groups = collections.OrderedDict(
-            sorted(self.img_groups.items()))
-        out_list = []
-        for list_img in self.img_groups.values():
-            out_list += list_img
-        # render non assigned images
-        out_list += self.radio_img_list
+    def rearrange(self, child1, child2):
 
-        self.fill_grid(out_list)
-        self.show_all()
+        def search_keys():
+            key1 = None
+            key2 = None
+            for key, value in self.img_groups.items():
+                for img, _ in value:
+                    if child1 == img:
+                        key1 = key
+                    if child2 == img:
+                        key2 = key
+                    if key1 and key2:
+                        return key1, key2
 
-    def fill_grid(self, img_list):
-        self.clear_grid()
-        for img in img_list:
-            self.grid.add(img[0])
-
-    def clear_grid(self):
-        for child in self.grid.get_children():
-            self.grid.remove(child)
+        keys = search_keys()
+        if keys:
+            key1, key2 = keys
+            if key1 > key2:
+                return 1
+            elif key2 > key1:
+                return -1
+            else:
+                return 0
+        else:
+            return 0
 
 
 Gtk.init()
