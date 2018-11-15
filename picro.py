@@ -1,5 +1,6 @@
 import gi
 gi.require_version('Gtk', '3.0')
+
 from gi.repository import Gtk, GdkPixbuf, Gdk, GObject
 
 import os
@@ -11,8 +12,7 @@ import collections
 class MainWindow(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Pic Organizer")
-        self.connect("destroy", Gtk.main_quit)
-        self.resize(1000, 600)
+        self.bootstrap()
 
         self.pos = (0, 0)
         self.radio_group = Gtk.RadioButton.new(None)
@@ -31,6 +31,14 @@ class MainWindow(Gtk.Window):
 
         self.add(self.vbox)
         self.add_icons()
+
+    def bootstrap(self):
+        self.connect("destroy", Gtk.main_quit)
+        screen = self.get_screen()
+        # !! problmatic on multi monitor setup
+        w, h = (screen.width(), screen.height())
+        self.resize(w, h)
+
 
     def finish_btn(self):
         label = Gtk.Label.new(
