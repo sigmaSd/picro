@@ -1,12 +1,12 @@
 import gi
 gi.require_version('Gtk', '3.0')
 
-from gi.repository import Gtk, GdkPixbuf, Gdk, GObject
+from gi.repository import Gtk, GdkPixbuf, Gdk, GObject, GLib
 
 import os
 import subprocess
-
 import collections
+from threading import Thread
 
 
 class MainWindow(Gtk.Window):
@@ -20,7 +20,6 @@ class MainWindow(Gtk.Window):
         self.connect("key_press_event", self.core_game)
         self.img_groups = {}
 
-        #self.grid = Gtk.Grid.new()
         self.grid = Gtk.FlowBox.new()
         self.grid.set_sort_func(self.rearrange)
         self.scrolled_win = Gtk.ScrolledWindow.new()
@@ -32,7 +31,12 @@ class MainWindow(Gtk.Window):
         self.vbox.pack_start(self.finish_btn(), False, False, 0)
 
         self.add(self.vbox)
-        self.add_icons()
+        self.show_all()
+        self.img_fetch_thread = None
+
+    def start(self):
+        self.img_fetch_thread = Thread(target=self.add_icons)
+        self.img_fetch_thread.start()
 
     def bootstrap(self):
         self.connect("destroy", Gtk.main_quit)
@@ -114,15 +118,19 @@ class MainWindow(Gtk.Window):
             if "JPEG" in out or "PNG" in out:
                 img = self.create_images(f)
                 tmp_list.append(img[1])
-                self.grid.add(img[0])
+                GLib.idle_add(self.grid.add, img[0])
         self.img_groups[65466] = list(zip(self.grid.get_children(), tmp_list))
 
     def create_images(self, f):
         icn = GdkPixbuf.Pixbuf.new_from_file_at_size(f, 420, 420)
         img = Gtk.Image.new_from_pixbuf(icn)
+        img.show()
         return (img, f)
 
     def core_game(self, _, key):
+        if self.img_fetch_thread.is_alive():
+            return
+
         key_val = key.get_keyval()[1]
         if key_val not in range(65457, 65466):
             return
@@ -184,5 +192,5 @@ class MainWindow(Gtk.Window):
 
 Gtk.init()
 win = MainWindow()
-win.show_all()
+win.start()
 Gtk.main()
