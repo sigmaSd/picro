@@ -34,11 +34,14 @@ class MainWindow(Gtk.Window):
 
     def bootstrap(self):
         self.connect("destroy", Gtk.main_quit)
-        screen = self.get_screen()
-        # !! problmatic on multi monitor setup
-        w, h = (screen.width(), screen.height())
-        self.resize(w, h)
-
+        display = Gdk.Display.get_default()
+        # Randomly decide that the first monitor is the primary one
+        monitor = display.get_monitor(0)
+        geometry = monitor.get_geometry()
+        scale_factor = monitor.get_scale_factor()
+        width = scale_factor * geometry.width
+        height = scale_factor * geometry.height
+        self.resize(width, height)
 
     def finish_btn(self):
         label = Gtk.Label.new(
@@ -180,11 +183,8 @@ class MainWindow(Gtk.Window):
     def fill_grid(self, img_list):
         self.clear_grid()
         for img in img_list:
-            # hacks everywhere
-            if type(img) is tuple:
-                img = img[0]
             col_n, row_n = self.pos
-            self.grid.attach(img, col_n, row_n, 1, 1)
+            self.grid.attach(img[0], col_n, row_n, 1, 1)
             self.advance()
 
     def advance(self):
@@ -198,6 +198,7 @@ class MainWindow(Gtk.Window):
         self.pos = (col_n, row_n)
 
 
+Gtk.init()
 win = MainWindow()
 win.show_all()
 Gtk.main()
