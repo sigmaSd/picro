@@ -42,10 +42,9 @@ class MainWindow(Gtk.Window):
             monitor = display.get_monitor(0)
         geometry = monitor.get_geometry()
         scale_factor = monitor.get_scale_factor()
-        # need it for magic stuff
-        self.width = scale_factor * geometry.width
+        width = scale_factor * geometry.width
         height = scale_factor * geometry.height
-        self.resize(self.width, height)
+        self.resize(width, height)
 
     def finish_btn(self):
         label = Gtk.Label.new(
@@ -174,17 +173,6 @@ class MainWindow(Gtk.Window):
         self.clear_grid()
         for img in img_list:
             self.grid.add(img[0])
-
-    def advance(self):
-        # Magic
-        MAX_W = self.width / 500
-        col_n, row_n = self.pos
-        if col_n < MAX_W - 1:
-            col_n += 1
-        else:
-            col_n = 0
-            row_n += 1
-        self.pos = (col_n, row_n)
 
 
 Gtk.init()
