@@ -27,7 +27,7 @@ class MainWindow(Gtk.Window):
 
         self.vbox = Gtk.Box.new(Gtk.Orientation(1), 0)
         self.vbox.pack_start(self.scrolled_win, True, True, 0)
-        self.vbox.pack_start(self.group_names(), False, False, 0)
+        self.vbox.pack_start(self.group_names_input(), False, False, 0)
         self.vbox.pack_start(self.finish_btn(), False, False, 0)
 
         self.add(self.vbox)
@@ -46,6 +46,22 @@ class MainWindow(Gtk.Window):
         height = scale_factor * geometry.height
         self.resize(width, height)
 
+    def group_names_input(self):
+
+        group_names = Gtk.Box.new(Gtk.Orientation(0), 0)
+        for i in range(1, 10):
+            label = Gtk.Label.new(str(i))
+            entry = Gtk.Entry.new()
+            hbox = Gtk.Box.new(Gtk.Orientation(0), 0)
+            hbox.pack_start(label, True, True, 0)
+            hbox.pack_start(entry, True, True, 0)
+            group_names.pack_start(hbox, True, True, 0)
+
+        grp_scrolled_win = Gtk.ScrolledWindow.new()
+        grp_scrolled_win.add(group_names)
+
+        return grp_scrolled_win
+
     def finish_btn(self):
         label = Gtk.Label.new(
             "Name your groups than click Done when you're finished")
@@ -56,16 +72,6 @@ class MainWindow(Gtk.Window):
         hbox.pack_start(button, True, True, 0)
 
         return hbox
-
-    def get_entred_groups_names(self):
-        names_list = []
-        # cool fn
-        names_boxes = self.vbox.get_children()[1].get_children()[
-            0].get_children()[0].get_children()
-        for box in names_boxes:
-            names_list.append(
-                (box.get_children()[0].get_text(), box.get_children()[1].get_text()))
-        return names_list
 
     def on_done_pressed(self, _widget):
         def translate(i):
@@ -82,21 +88,24 @@ class MainWindow(Gtk.Window):
                     new_name = "%s-%s" % (group_name, img_file)
                     os.rename(img_file, new_name)
 
-    def group_names(self):
+    def get_entred_groups_names(self):
+        names_list = []
+        # cool fn
+        names_boxes = self.vbox.get_children()[1].get_children()[
+            0].get_children()[0].get_children()
+        for box in names_boxes:
+            names_list.append(
+                (box.get_children()[0].get_text(), box.get_children()[1].get_text()))
+        return names_list
 
-        group_names = Gtk.Box.new(Gtk.Orientation(0), 0)
-        for i in range(1, 10):
-            label = Gtk.Label.new(str(i))
-            entry = Gtk.Entry.new()
-            hbox = Gtk.Box.new(Gtk.Orientation(0), 0)
-            hbox.pack_start(label, True, True, 0)
-            hbox.pack_start(entry, True, True, 0)
-            group_names.pack_start(hbox, True, True, 0)
+    def add_icons(self):
+        files = os.listdir(os.path.curdir)
+        for f in files:
+            out = subprocess.check_output(["file", f]).decode("UTF-8")
+            if "JPEG" in out or "PNG" in out:
+                self.create_icons(f)
 
-        grp_scrolled_win = Gtk.ScrolledWindow.new()
-        grp_scrolled_win.add(group_names)
-
-        return grp_scrolled_win
+        self.fill_grid(self.radio_img_list)
 
     def create_icons(self, f):
         icn = GdkPixbuf.Pixbuf.new_from_file_at_size(f, 420, 420)
@@ -136,17 +145,6 @@ class MainWindow(Gtk.Window):
         else:
             self.img_groups[key_val].append(active_img)
 
-    def move_img(self, active_img):
-        out_list = []
-        for img in self.radio_img_list:
-            if active_img != img:
-                out_list.append(img)
-        self.radio_img_list = out_list
-
-    def clear_grid(self):
-        for child in self.grid.get_children():
-            self.grid.remove(child)
-
     def rearrange(self):
         # perf !!!
         self.img_groups = collections.OrderedDict(
@@ -160,19 +158,14 @@ class MainWindow(Gtk.Window):
         self.fill_grid(out_list)
         self.show_all()
 
-    def add_icons(self):
-        files = os.listdir(os.path.curdir)
-        for f in files:
-            out = subprocess.check_output(["file", f]).decode("UTF-8")
-            if "JPEG" in out or "PNG" in out:
-                self.create_icons(f)
-
-        self.fill_grid(self.radio_img_list)
-
     def fill_grid(self, img_list):
         self.clear_grid()
         for img in img_list:
             self.grid.add(img[0])
+
+    def clear_grid(self):
+        for child in self.grid.get_children():
+            self.grid.remove(child)
 
 
 Gtk.init()
