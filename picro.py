@@ -35,8 +35,10 @@ class MainWindow(Gtk.Window):
     def bootstrap(self):
         self.connect("destroy", Gtk.main_quit)
         display = Gdk.Display.get_default()
-        # Randomly decide that the first monitor is the primary one
-        monitor = display.get_monitor(0)
+        monitor = display.get_primary_monitor()
+        if not monitor:
+            # Randomly decide that the first monitor is the primary one as a fallback
+            monitor = display.get_monitor(0)
         geometry = monitor.get_geometry()
         scale_factor = monitor.get_scale_factor()
         width = scale_factor * geometry.width
