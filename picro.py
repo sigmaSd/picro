@@ -25,7 +25,11 @@ class MainWindow(Gtk.Window):
         self.scrolled_win = Gtk.ScrolledWindow.new()
         self.scrolled_win.add(self.grid)
 
+        self.img_paths = None
+        self.progress_bar = self.create_progress_bar()
+
         self.vbox = Gtk.Box.new(Gtk.Orientation(1), 0)
+        self.vbox.pack_start(self.progress_bar, False, False, 10)
         self.vbox.pack_start(self.scrolled_win, True, True, 0)
         self.vbox.pack_start(self.group_names_input(), False, False, 0)
         self.vbox.pack_start(self.finish_btn(), False, False, 0)
@@ -51,6 +55,15 @@ class MainWindow(Gtk.Window):
         height = scale_factor * geometry.height
         self.resize(width, height)
 
+    def create_progress_bar(self):
+        label = Gtk.Label.new()
+        label.props.margin_left = 10
+        progress = Gtk.ProgressBar.new()
+        hbox = Gtk.Box.new(Gtk.Orientation(0), 0)
+        hbox.pack_start(label, False, False, 10)
+        hbox.pack_start(progress, True, True, 0)
+        return hbox
+
     def group_names_input(self):
 
         group_names = Gtk.Box.new(Gtk.Orientation(0), 0)
@@ -69,7 +82,7 @@ class MainWindow(Gtk.Window):
 
     def finish_btn(self):
         label = Gtk.Label.new(
-            "Name your groups than click Done when you're finished")
+            "Name your groups than click 'Done' when you're finished")
         button = Gtk.Button.new_with_label("Done")
         button.connect('clicked', self.on_done_pressed)
         hbox = Gtk.Box.new(Gtk.Orientation(0), 0)
@@ -112,14 +125,44 @@ class MainWindow(Gtk.Window):
 
     def add_icons(self):
         files = os.listdir(os.path.curdir)
+        files_num = len(files)
         tmp_list = []
-        for f in files:
-            out = subprocess.check_output(["file", f]).decode("UTF-8")
-            if "JPEG" in out or "PNG" in out:
-                img = self.create_images(f)
-                tmp_list.append(img[1])
-                GLib.idle_add(self.grid.add, img[0])
-        self.img_groups[65466] = list(zip(self.grid.get_children(), tmp_list))
+
+        def add_progress(progress):
+            self.progress_bar.get_children()[1].set_fraction(progress)
+
+        def progress_label(label):
+            self.progress_bar.get_children()[0].set_label(label)
+
+        def filter_images():
+            progress_label("Looking for images")
+            img_list = []
+            for idx, f in enumerate(files):
+                progress = idx / (files_num - 1)
+                out = subprocess.check_output(["file", f]).decode("UTF-8")
+                if "JPEG" in out or "PNG" in out:
+                    img_list.append(f)
+                GLib.idle_add(add_progress, progress)
+            return img_list
+
+        img_list = filter_images()
+        if not img_list:
+            print("No images found in current directory")
+            quit()
+        img_num = len(img_list)
+
+        for idx, img in enumerate(img_list):
+            progress_label("Creating icons")
+            img = self.create_images(img)
+            GLib.idle_add(self.grid.add, img[0])
+
+            progress = idx/(img_num - 1)
+            GLib.idle_add(add_progress, progress)
+
+            tmp_list.append(img[1])
+        # workaround race condition
+        self.img_paths = tmp_list
+        self.progress_bar.hide()
 
     def create_images(self, f):
         icn = GdkPixbuf.Pixbuf.new_from_file_at_size(f, 420, 420)
@@ -128,8 +171,14 @@ class MainWindow(Gtk.Window):
         return (img, f)
 
     def core_game(self, _, key):
-        if self.img_fetch_thread.is_alive():
+
+        if not self.img_paths:
             return
+
+        # fill self.img_groups in main thread to avoid race condition
+        if not self.img_groups:
+            self.img_groups[65466] = list(
+                zip(self.grid.get_children(), self.img_paths))
 
         key_val = key.get_keyval()[1]
         if key_val not in range(65457, 65466):
