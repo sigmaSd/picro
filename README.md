@@ -8,4 +8,3 @@
 ## To do
 
 - [ ] Add group names to images metadata instad of appending it to images names, this can happen when the file manager I use 'Nautilus' implments sorting and searching for metadata
-- [ ] Refactor the code ++++++
