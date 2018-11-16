@@ -116,6 +116,7 @@ class MainWindow(Gtk.Window):
     def get_entred_groups_names(self):
         names_list = []
         # cool fn
+        # need to make a wrapper around the internals!
         names_boxes = self.vbox.get_children()[2].get_children()[
             0].get_children()[0].get_children()
         for box in names_boxes:
@@ -154,6 +155,7 @@ class MainWindow(Gtk.Window):
         for idx, img in enumerate(img_list):
             progress_label("Creating icons")
             img = self.create_images(img)
+            GLib.idle_add(img[0].show)
             GLib.idle_add(self.grid.add, img[0])
 
             progress = idx/(img_num - 1)
@@ -167,16 +169,15 @@ class MainWindow(Gtk.Window):
     def create_images(self, f):
         icn = GdkPixbuf.Pixbuf.new_from_file_at_size(f, 420, 420)
         img = Gtk.Image.new_from_pixbuf(icn)
-        img.show()
         return (img, f)
 
     def core_game(self, _, key):
 
-        if not self.img_paths:
+        if self.img_fetch_thread.is_alive():
             return
 
         # fill self.img_groups in main thread to avoid race condition
-        if not self.img_groups:
+        if self.img_paths and not self.img_groups:
             self.img_groups[65466] = list(
                 zip(self.grid.get_children(), self.img_paths))
 
