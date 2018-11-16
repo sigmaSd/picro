@@ -116,7 +116,7 @@ class MainWindow(Gtk.Window):
     def get_entred_groups_names(self):
         names_list = []
         # cool fn
-        names_boxes = self.vbox.get_children()[1].get_children()[
+        names_boxes = self.vbox.get_children()[2].get_children()[
             0].get_children()[0].get_children()
         for box in names_boxes:
             names_list.append(
