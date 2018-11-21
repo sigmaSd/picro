@@ -9,10 +9,12 @@ If your file manager doesn't support sorting and searching images by keywords th
 <img src="./picro-demo.gif" width="80%" height="80%">
 
 ## Dependencies
-python pyGtk exiftool
+`python pyGtk exiftool`
 
 ## Todo
 
 - [ ] Clean up code again
+
+- [ ] Improve performance
 
 - [ ] Cross platform 
