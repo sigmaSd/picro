@@ -243,11 +243,6 @@ class MainWindow(Gtk.Window):
         img_num = len(img_list)
 
         if self.type == 'viewer':
-            self.progress_label('Reading images keywords')
-            read_keywords()
-
-        self.progress_label("Creating icons")
-        if self.type == 'viewer':
             def manual_sort():
                 out = []
                 for img in self.imgs_with_keywords.keys():
@@ -261,7 +256,13 @@ class MainWindow(Gtk.Window):
                 out += img_list
                 return out
 
+            self.progress_label('Reading images keywords')
+            read_keywords()
+
             img_list = manual_sort()
+
+        self.progress_label("Creating icons")
+
         for idx, img_file in enumerate(img_list):
             img = self.create_images(img_file)
             GLib.idle_add(add_to_grid)
