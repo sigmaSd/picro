@@ -12,6 +12,8 @@ from threading import Thread
 
 # Needed to remove stdout
 FNULL = open(os.devnull, 'w')
+# Blacklist some file types
+BLACKLIST = ['vnd.fpx']
 
 
 class MainWindow(Gtk.Window):
@@ -25,6 +27,8 @@ class MainWindow(Gtk.Window):
         self.img_groups = {}
         self.imgs_with_keywords = {}
         self.img_paths = []
+        # var used to signal operation end
+        self.operation_done = None
 
         # GUI
         self.scrolled_win = self._scrolled_win()
@@ -122,6 +126,16 @@ class MainWindow(Gtk.Window):
         self.progress_bar.get_children()[0].set_label(label)
         self.progress_bar.show_all()
 
+    def progress_pulse(self):
+        def pulse():
+            if not self.operation_done:
+                self.progress_bar.get_children()[1].pulse()
+                return True
+            else:
+                return False
+        self.operation_done = False
+        GLib.timeout_add(1000, pulse)
+
     def _group_names_input(self):
 
         group_names = Gtk.Box.new(Gtk.Orientation(0), 0)
@@ -186,7 +200,7 @@ class MainWindow(Gtk.Window):
                         progress = current_progress / (img_count - 1)
                         GLib.idle_add(self.add_progress, progress)
                         current_progress += 1
-
+            FNULL.close()
             os._exit(0)
 
         grp_names_list = self._get_entered_groups_names()
@@ -201,87 +215,93 @@ class MainWindow(Gtk.Window):
     def _add_icons(self):
         """Create icons from current dir images"""
         files = os.listdir(os.path.curdir)
-        files_num = len(files)
+        img_list = []
         tmp_list = []
 
-        def add_to_grid():
-            self.grid.add(img[0])
+        def discover_images():
+            self.progress_label('Discovering images')
+            self.progress_pulse()
 
-        def image_to_flowbox_child():
-            if img[1] in self.imgs_with_keywords:
-                self.imgs_with_keywords[img[0]
-                                        ] = self.imgs_with_keywords.pop(img[1])
+            exiftool_cmd = 'exiftool -fast2 ' + ' '.join(files)
+            out = subprocess.getoutput(exiftool_cmd)
+            tmp_file_name = ''
 
-        def read_keywords():
-            current_progress = 0
-            for img in img_list:
-                out = subprocess.check_output(
-                    ['exiftool', img]).decode('UTF-8')
-                keyword_line = [l for l in out.splitlines() if 'Keywords' in l]
-                if keyword_line:
-                    keyword = keyword_line[0].split(':')[1].strip()
-                    self.imgs_with_keywords[img] = keyword
+            for line in out.splitlines():
+                if 'Error' in line:
+                    # file type can't be read
+                    pass
 
-                progress = current_progress / (img_num - 1)
+                elif '========' in line:
+                    filename = line.split()[1]
+                    tmp_file_name = filename
+
+                elif 'MIME Type' in line:
+                    if any(filetype for filetype in BLACKLIST if filetype in line) or 'image' not in line:
+                        # not an image or file type is blacklisted
+                        tmp_file_name = ''
+                    else:
+                        # 'image' in line:
+                        img_list.append(tmp_file_name)
+
+                elif 'Keywords' in line:
+                    if tmp_file_name:
+                        keywords = line.split(':')[1].strip()
+                        self.imgs_with_keywords[tmp_file_name] = keywords
+                        tmp_file_name = ''
+
+            self.operation_done = True
+
+        def sort_by_keywords():
+            out = []
+            for img in self.imgs_with_keywords:
+                idx = img_list.index(img)
+                if idx != -1:
+                    del img_list[idx]
+            sorted_list = sorted(
+                self.imgs_with_keywords.items(), key=lambda x: x[1])
+            for v, _ in sorted_list:
+                out.append(v)
+            out += img_list
+            return out
+
+        def create_icons():
+            def add_to_grid():
+                self.grid.add(img[0])
+
+            def image_to_flowbox_child():
+                if img[1] in self.imgs_with_keywords:
+                    self.imgs_with_keywords[img[0]
+                                            ] = self.imgs_with_keywords.pop(img[1])
+
+            self.progress_label("Creating icons")
+
+            img_num = len(img_list)
+            for idx, img_file in enumerate(img_list):
+                img = self._create_images(img_file)
+                GLib.idle_add(add_to_grid)
+
+                if self.type == 'viewer':
+                    GLib.idle_add(image_to_flowbox_child)
+
+                progress = idx/(img_num - 1)
                 GLib.idle_add(self.add_progress, progress)
-                current_progress += 1
 
-        def filter_images():
-            self.progress_label("Looking for images")
-            img_list = []
-            for idx, f in enumerate(files):
-                progress = idx / (files_num - 1)
-                out = subprocess.check_output(["file", f]).decode("UTF-8")
-                if "JPEG" in out or "PNG" in out:
-                    img_list.append(f)
-                GLib.idle_add(self.add_progress, progress)
-            return img_list
+                tmp_list.append(img[1])
 
-        # Find images step
-        img_list = filter_images()
-        if not img_list:
-            print("No images found in current directory")
-            quit()
-        img_num = len(img_list)
+        # Discover images step
+        discover_images()
 
-        # In case of viewer: Read image keywords step
+        # In case of viewer: Sort images by keywords step
         if self.type == 'viewer':
-            def manual_sort():
-                out = []
-                for img in self.imgs_with_keywords:
-                    idx = img_list.index(img)
-                    if idx != -1:
-                        del img_list[idx]
-                sorted_list = sorted(
-                    self.imgs_with_keywords.items(), key=lambda x: x[1])
-                for v, _ in sorted_list:
-                    out.append(v)
-                out += img_list
-                return out
-
-            self.progress_label('Reading images keywords')
-            read_keywords()
-
-            img_list = manual_sort()
+            img_list = sort_by_keywords()
 
         # Create icons step
-        self.progress_label("Creating icons")
-
-        for idx, img_file in enumerate(img_list):
-            img = self._create_images(img_file)
-            GLib.idle_add(add_to_grid)
-
-            if self.type == 'viewer':
-                GLib.idle_add(image_to_flowbox_child)
-
-            progress = idx/(img_num - 1)
-            GLib.idle_add(self.add_progress, progress)
-
-            tmp_list.append(img[1])
+        create_icons()
 
         # workaround race condition
         self.img_paths = tmp_list
 
+        # GUI stuff
         self.progress_bar.hide()
         self.search_bar.show()
 
