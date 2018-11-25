@@ -8,6 +8,7 @@ from gi.repository import Gtk, Gdk, Gio, GLib, GdkPixbuf, GObject
 import os
 import sys
 import subprocess
+import signal
 from threading import Thread
 
 # Needed to remove stdout
@@ -16,6 +17,15 @@ FNULL = open(os.devnull, 'w')
 BLACKLIST = ['vnd.fpx']
 
 
+# Exit properly when Ctrl-c is hit
+def signal_handler(sig, frame):
+    sys.exit(0)
+
+
+signal.signal(signal.SIGINT, signal_handler)
+
+
+# Core
 class MainWindow(Gtk.Window):
     def __init__(self, win_type='picro'):
         Gtk.Window.__init__(self, title="Pic Organizer")
