@@ -222,7 +222,11 @@ class MainWindow(Gtk.Window):
             self.progress_label('Discovering images')
             self.progress_pulse()
 
-            exiftool_cmd = 'exiftool -fast2 ' + ' '.join(files)
+            # escape special character in files names
+            files_escaped = ['%s' % f for f in files]
+            files_escaped = "'" + "' '".join(files_escaped) + "'"
+
+            exiftool_cmd = 'exiftool -fast2 -m ' + files_escaped
             out = subprocess.getoutput(exiftool_cmd)
             tmp_file_name = ''
 
@@ -265,8 +269,8 @@ class MainWindow(Gtk.Window):
             return out
 
         def create_icons():
-            def add_to_grid():
-                self.grid.add(img[0])
+            def add_to_grid(image):
+                self.grid.add(image[0])
 
             def image_to_flowbox_child():
                 if img[1] in self.imgs_with_keywords:
@@ -275,24 +279,27 @@ class MainWindow(Gtk.Window):
 
             self.progress_label("Creating icons")
 
+            if self.type == 'picro':
+                img_list = files
+
             img_num = len(img_list)
             for idx, img_file in enumerate(img_list):
                 img = self._create_images(img_file)
-                GLib.idle_add(add_to_grid)
+                if img:
+                    GLib.idle_add(add_to_grid, img)
 
-                if self.type == 'viewer':
-                    GLib.idle_add(image_to_flowbox_child)
+                    if self.type == 'viewer':
+                        GLib.idle_add(image_to_flowbox_child)
 
-                progress = idx/(img_num - 1)
-                GLib.idle_add(self.add_progress, progress)
+                    progress = idx/(img_num - 1)
+                    GLib.idle_add(self.add_progress, progress)
 
-                tmp_list.append(img[1])
+                    tmp_list.append(img[1])
 
-        # Discover images step
-        discover_images()
-
-        # In case of viewer: Sort images by keywords step
         if self.type == 'viewer':
+            # Discover images step
+            discover_images()
+            # Sort images by keywords step
             img_list = sort_by_keywords()
 
         # Create icons step
@@ -306,7 +313,11 @@ class MainWindow(Gtk.Window):
         self.search_bar.show()
 
     def _create_images(self, f):
-        icn = GdkPixbuf.Pixbuf.new_from_file_at_size(f, 420, 420)
+        try:
+            icn = GdkPixbuf.Pixbuf.new_from_file_at_size(f, 420, 420)
+        except:
+            # Not an image
+            return None
         img = Gtk.Image.new_from_pixbuf(icn)
         flow_box_child = Gtk.FlowBoxChild.new()
         flow_box_child.add(img)
