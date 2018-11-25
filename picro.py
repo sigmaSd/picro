@@ -222,12 +222,9 @@ class MainWindow(Gtk.Window):
             self.progress_label('Discovering images')
             self.progress_pulse()
 
-            # escape special character in files names
-            files_escaped = ['%s' % f for f in files]
-            files_escaped = "'" + "' '".join(files_escaped) + "'"
-
-            exiftool_cmd = 'exiftool -fast2 -m ' + files_escaped
-            out = subprocess.getoutput(exiftool_cmd)
+            exiftool_cmd = ['exiftool', '-fast2'] + files
+            out = subprocess.run(exiftool_cmd, errors='ignore',
+                                 check=False, stdout=subprocess.PIPE).stdout
             tmp_file_name = ''
 
             for line in out.splitlines():
@@ -268,7 +265,7 @@ class MainWindow(Gtk.Window):
             out += img_list
             return out
 
-        def create_icons():
+        def create_icons(image_files):
             def add_to_grid(image):
                 self.grid.add(image[0])
 
@@ -279,11 +276,8 @@ class MainWindow(Gtk.Window):
 
             self.progress_label("Creating icons")
 
-            if self.type == 'picro':
-                img_list = files
-
-            img_num = len(img_list)
-            for idx, img_file in enumerate(img_list):
+            img_num = len(image_files)
+            for idx, img_file in enumerate(image_files):
                 img = self._create_images(img_file)
                 if img:
                     GLib.idle_add(add_to_grid, img)
@@ -301,9 +295,12 @@ class MainWindow(Gtk.Window):
             discover_images()
             # Sort images by keywords step
             img_list = sort_by_keywords()
+        else:
+            # self.type = 'picro':
+            img_list = files
 
         # Create icons step
-        create_icons()
+        create_icons(img_list)
 
         # workaround race condition
         self.img_paths = tmp_list
