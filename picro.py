@@ -1,13 +1,13 @@
-#!/bin/python
+#!/usr/bin/python
 
 from threading import Thread
 import signal
 import subprocess
 import sys
 import os
-from gi.repository import Gtk, Gdk, Gio, GLib, GdkPixbuf, GObject
 import gi
 gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk, Gdk, Gio, GLib, GdkPixbuf, GObject
 
 
 # Needed to remove stdout
@@ -191,14 +191,11 @@ class MainWindow(Gtk.Window):
 
     def _on_done_pressed(self, _widget):
         """Callback -> Add keywords to images"""
-        def translate(i):
-            # 65457 corresponds to KEY_PAD_1
-            return i - 65456
 
         def add_keywords():
             current_progress = 0
             for key, image_list in self.img_groups.items():
-                index = translate(key)
+                index = key
                 for label_index, inputted_name in grp_names_list:
                     if index == int(label_index):
                         group_name = inputted_name
@@ -349,11 +346,8 @@ class MainWindow(Gtk.Window):
             self.img_groups[65466] = list(
                 zip(self.grid.get_children(), self.img_paths))
 
-        def add_to_primary_group():
-            # KEY_PAD_1: 65457, KEY_PAD_9: 65465
-            if key_val not in range(65457, 65466):
-                return
-
+        def add_to_primary_group(key_val):
+            print('fst')
             if not self.grid.get_selected_children():
                 return
 
@@ -365,18 +359,28 @@ class MainWindow(Gtk.Window):
             active_img[0].changed()
 
         def add_to_secondary_group(key_val1, key_val2):
-            if check_group_exisits():
-                pass
+            print('sec')
+            if key_val1 in self.img_groups:
+                print('do stuff')
 
         def handle_key():
-            key_val = key.get_keyval()[1]
-            self.key_holder.append(key_val)      
+            try:
+                key_val = int(key.string)
+            except ValueError:
+                # not a number key
+                return
+
+            self.key_holder.append(key_val)
             # idle
+            print(key.get_event_type())
             if not self.event_type:
                 if key.get_event_type() == Gdk.EventType.KEY_PRESS:
                     self.event_type = 'press'
+                    # we ignore the first press
+                    return
                 elif key.get_event_type() == Gdk.EventType.KEY_RELEASE:
                     self.event_type = 'release'
+            print(self.event_type)
             # One key held and another one pressed
             if self.event_type == 'press':
                 key_val1 = self.key_holder[0]
@@ -389,7 +393,7 @@ class MainWindow(Gtk.Window):
                 if len(self.key_holder) == 1:
                     add_to_primary_group(key_val)
                     self.key_holder = []
-                
+
         handle_key()
 
     def _search_dict_for_img(self, active_img):
