@@ -351,7 +351,6 @@ class MainWindow(Gtk.Window):
 
         def add_to_primary_group():
             # KEY_PAD_1: 65457, KEY_PAD_9: 65465
-            key_val = key.get_keyval()[1]
             if key_val not in range(65457, 65466):
                 return
 
@@ -365,24 +364,32 @@ class MainWindow(Gtk.Window):
             # signal sort fn
             active_img[0].changed()
 
-        def add_to_secondary_group():
-            pass
+        def add_to_secondary_group(key_val1, key_val2):
+            if check_group_exisits():
+                pass
 
         def handle_key():
             key_val = key.get_keyval()[1]
-            self.key_holder            
+            self.key_holder.append(key_val)      
             # idle
             if not self.event_type:
                 if key.get_event_type() == Gdk.EventType.KEY_PRESS:
                     self.event_type = 'press'
                 elif key.get_event_type() == Gdk.EventType.KEY_RELEASE:
                     self.event_type = 'release'
-            # one key pressed
+            # One key held and another one pressed
             if self.event_type == 'press':
-                add_to_secondary_group()
+                key_val1 = self.key_holder[0]
+                key_val2 = key_val
+                add_to_secondary_group(key_val1, key_val2)
+                self.key_holder = []
+            # one key pressed and released
             if self.event_type == 'release':
-                add_to_primary_group()
-
+                # Ignore key relases after multiple key hit
+                if len(self.key_holder) == 1:
+                    add_to_primary_group(key_val)
+                    self.key_holder = []
+                
         handle_key()
 
     def _search_dict_for_img(self, active_img):
